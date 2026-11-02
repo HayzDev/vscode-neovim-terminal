@@ -1,0 +1,151 @@
+{
+  "name": "neovim-terminal",
+  "displayName": "Neovim Terminal",
+  "description": "Open files in real Neovim terminals in the VS Code editor area.",
+  "version": "0.1.1",
+  "publisher": "xander-local",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    },
+    "virtualWorkspaces": {
+      "supported": false
+    }
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "neovimTerminal.open",
+        "title": "Neovim Terminal: Open File"
+      },
+      {
+        "command": "neovimTerminal.run",
+        "title": "Neovim Terminal: Save and Run Current File"
+      },
+      {
+        "command": "neovimTerminal.close",
+        "title": "Neovim Terminal: Close Safely"
+      },
+      {
+        "command": "neovimTerminal.restore",
+        "title": "Neovim Terminal: Restore Session"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "neovimTerminal.open",
+          "when": "resourceScheme == file && !explorerResourceIsFolder",
+          "group": "navigation"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "neovimTerminal.open",
+          "when": "resourceScheme == file",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Neovim Terminal",
+      "properties": {
+        "neovimTerminal.autoOpen": {
+          "type": "boolean",
+          "default": true,
+          "description": "Redirect clean file editors to Neovim terminal tabs. Diff editors and unsaved files are kept in VS Code."
+        },
+        "neovimTerminal.executable": {
+          "type": "string",
+          "default": "nvim",
+          "scope": "machine",
+          "description": "Neovim executable path on the machine running the extension."
+        },
+        "neovimTerminal.sharedProcess": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use one background Neovim server and terminal per workspace; files share buffers, plugins, and language servers."
+        },
+        "neovimTerminal.restoreSession": {
+          "type": "boolean",
+          "default": true,
+          "description": "Restore workspace files, unsaved buffer snapshots, and cursor positions on startup."
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "key": "shift+left",
+        "command": "workbench.action.terminal.sendSequence",
+        "args": {
+          "text": "\u001b[1;2D"
+        },
+        "when": "terminalFocus && neovimTerminal.active"
+      },
+      {
+        "key": "shift+right",
+        "command": "workbench.action.terminal.sendSequence",
+        "args": {
+          "text": "\u001b[1;2C"
+        },
+        "when": "terminalFocus && neovimTerminal.active"
+      },
+      {
+        "key": "shift+up",
+        "command": "workbench.action.terminal.sendSequence",
+        "args": {
+          "text": "\u001b[1;2A"
+        },
+        "when": "terminalFocus && neovimTerminal.active"
+      },
+      {
+        "key": "shift+down",
+        "command": "workbench.action.terminal.sendSequence",
+        "args": {
+          "text": "\u001b[1;2B"
+        },
+        "when": "terminalFocus && neovimTerminal.active"
+      },
+      {
+        "key": "ctrl+f5",
+        "command": "neovimTerminal.run",
+        "when": "terminalFocus && neovimTerminal.active"
+      }
+    ]
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "test:integration": "node test/run-integration.js",
+    "package": "vsce package --skip-license"
+  },
+  "dependencies": {
+    "jsonc-parser": "^3.3.1",
+    "neovim": "^5.5.0"
+  },
+  "devDependencies": {
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^4.1.0"
+  },
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HayzDev/vscode-neovim-terminal.git"
+  },
+  "bugs": {
+    "url": "https://github.com/HayzDev/vscode-neovim-terminal/issues"
+  },
+  "homepage": "https://github.com/HayzDev/vscode-neovim-terminal#readme"
+}

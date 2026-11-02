@@ -1,0 +1,24 @@
+const path = require('node:path');
+
+async function saveCurrentFile(vscode, client, ownsDocument = () => false) {
+  const file = await client.request('nvim_exec_lua', [`
+    local buf = vim.api.nvim_get_current_buf()
+    return { buf = buf, path = vim.api.nvim_buf_get_name(buf), buftype = vim.bo[buf].buftype, filetype = vim.bo[buf].filetype }
+  `, []]);
+  if (file.buftype !== '' || !path.isAbsolute(file.path)) {
+    throw new Error('Open a named file in Neovim before running it.');
+  }
+  const uri = vscode.Uri.file(file.path);
+  if (vscode.workspace.textDocuments.some(document => document.uri.toString() === uri.toString() && document.isDirty && !ownsDocument(document))) {
+    throw new Error('This file has unsaved edits in VS Code. Save or discard those edits before running from Neovim.');
+  }
+  await client.request('nvim_exec_lua', [`
+    local buf, name = ...
+    assert(vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_get_name(buf) == name, 'The Neovim file changed; try running again.')
+    vim.api.nvim_buf_call(buf, function() vim.cmd('update') end)
+    assert(not vim.bo[buf].modified, 'Neovim could not save this file.')
+  `, [file.buf, file.path]]);
+  return { uri, filetype: file.filetype };
+}
+
+module.exports = { saveCurrentFile };
