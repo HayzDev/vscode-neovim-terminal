@@ -31,9 +31,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -Code 
 
 The scripts run `npm ci`, package a VSIX, and install it using the selected VS Code CLI. `ExecutionPolicy Bypass` applies only to that PowerShell process. If you already downloaded a release VSIX, skip Node/npm and building with `--vsix /path/to/file.vsix` or `-Vsix C:\path\file.vsix`. Paths with spaces are supported. To choose a CLI outside PATH, pass its full path via `--code` or `-Code`. On macOS, run **Shell Command: Install 'code' command in PATH** in VS Code first if needed.
 
+Download a prebuilt VSIX from [Releases](https://github.com/HayzDev/vscode-neovim-terminal/releases/latest) while signed into an account with repository access. With GitHub CLI, use `gh release download --repo HayzDev/vscode-neovim-terminal --pattern '*.vsix'`.
+
 Alternatively use **Extensions: Install from VSIX…**. Save existing work, then run **Developer: Reload Window** after an update. Open a saved file to check that Neovim starts. If GUI VS Code cannot find it, set `neovimTerminal.executable` to the absolute Neovim executable path. You can update by pulling the repository and rerunning the installer.
 
-Platform status: Linux has passed the real VS Code Insiders integration suites. macOS uses Unix sockets and Windows uses local named pipes; native end-to-end validation is still pending. The GitHub workflow runs unit/RPC tests and packaging on all three platforms. Windows filesystem permissions use inherited ACLs, rather than Unix owner-only mode bits.
+Platform status: Linux has passed the real VS Code Insiders integration suites. macOS uses Unix sockets and Windows uses local named pipes; native end-to-end validation is still pending. GitHub-hosted unit/RPC checks pass on all three platforms; the workflow also packages VSIX builds. Native macOS/Windows VS Code terminal/recovery flows still need testing. Windows filesystem permissions use inherited ACLs, rather than Unix owner-only mode bits.
 
 Opening a saved file redirects it to Neovim. Explorer opens, search results, diagnostics, and definition links carry their file/line/column through the normal editor-opening path. Diff editors and unrelated unsaved VS Code edits stay in VS Code. **Neovim Terminal: Open File** is also available in the command palette and file context menus.
 
