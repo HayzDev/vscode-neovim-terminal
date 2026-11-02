@@ -24,7 +24,7 @@ if (-not $Vsix) {
     if (-not (Get-Command node -ErrorAction SilentlyContinue) -or -not (Get-Command npm -ErrorAction SilentlyContinue)) {
         throw 'Building requires Node.js 22+ and npm. Alternatively pass -Vsix.'
     }
-    & node -e 'if (Number(process.versions.node.split(".")[0]) < 22) process.exit(1)'
+    & node -e 'if (Number(process.versions.node.split(String.fromCharCode(46))[0]) < 22) process.exit(1)'
     if ($LASTEXITCODE -ne 0) { throw 'Node.js 22+ is required for packaging.' }
     Push-Location $root
     try {

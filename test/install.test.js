@@ -41,5 +41,17 @@ test('Windows installer handles VSIX paths with spaces and CLI failures', { skip
     assert.ok(received.includes(vsix));
     assert.ok(received.includes('--force'));
     assert.notEqual(run(7).status, 0);
+    const fixture = path.join(directory, 'source checkout');
+    await fs.mkdir(path.join(fixture, 'scripts'), { recursive: true });
+    await fs.copyFile(path.resolve(__dirname, '../scripts/install.ps1'), path.join(fixture, 'scripts/install.ps1'));
+    await fs.writeFile(path.join(fixture, 'package.json'), JSON.stringify({ version: '0.0.0' }));
+    const built = path.join(fixture, 'neovim-terminal-0.0.0.vsix');
+    await fs.writeFile(built, 'fixture');
+    await fs.writeFile(path.join(directory, 'npm.cmd'), '@exit /b 0\r\n');
+    const source = spawnSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(fixture, 'scripts/install.ps1'), '-Code', cli], {
+      encoding: 'utf8', env: { ...process.env, PATH: directory + path.delimiter + process.env.PATH, INSTALL_LOG: log, INSTALL_EXIT: '0' },
+    });
+    assert.equal(source.status, 0, source.stderr);
+    assert.ok((await fs.readFile(log, 'utf8')).includes(built));
   } finally { await fs.rm(directory, { recursive: true, force: true }); }
 });
