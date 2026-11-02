@@ -5,15 +5,17 @@ const path = require('node:path');
 const { connect } = require('./rpc');
 const { socketPath } = require('./transport');
 const { loadPalette } = require('./theme');
-const { saveCurrentFile } = require('./run');
+const { saveCurrentFile, runAutoHotkey } = require('./run');
 const { backend } = require('./backend');
 const { Documents } = require('./documents');
 const { closeSession } = require('./close');
+const { switchFile } = require('./navigation');
 let activeDocuments;
 
 async function activate(context) {
   const sessions = new Map();
   const terminals = new Map();
+  const openVersions = new Map();
   let preparingRun = false;
   const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   status.command = 'neovimTerminal.run';
@@ -27,11 +29,6 @@ async function activate(context) {
       status.text = `$(edit) ${filename}${file.modified ? ' *' : ''}`;
       status.tooltip = `Neovim: ${file.path}\nCtrl+F5: save and run in VS Code`;
       status.show();
-      const title = `nvim: ${filename}${file.modified ? ' *' : ''}`;
-      if (session.terminal && !session.closed && session.title !== title) {
-        session.title = title;
-        void vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', { name: title });
-      }
     } else status.hide();
   };
   const output = vscode.window.createOutputChannel('Neovim Terminal');
@@ -43,6 +40,7 @@ async function activate(context) {
   const fileScript = fs.readFile(path.join(context.extensionPath, 'lua/current-file.lua'), 'utf8');
   const singleUiScript = fs.readFile(path.join(context.extensionPath, 'lua/single-ui.lua'), 'utf8');
   const referencesScript = fs.readFile(path.join(context.extensionPath, 'lua/references.lua'), 'utf8');
+  const quickOpenScript = fs.readFile(path.join(context.extensionPath, 'lua/quick-open.lua'), 'utf8');
   const keymapsScript = fs.readFile(path.join(context.extensionPath, 'lua/keymaps.lua'), 'utf8');
   const themeScript = fs.readFile(path.join(context.extensionPath, 'lua/theme.lua'), 'utf8');
   let themeQueue = Promise.resolve();
@@ -68,7 +66,8 @@ async function activate(context) {
   function showTerminal(session, viewColumn) {
     if (!session.closed && session.terminal) { session.terminal.show(); return; }
     const terminal = vscode.window.createTerminal({
-      name: `nvim: ${path.basename(session.file?.path || session.uri.fsPath)}`,
+      // An explicit name pins a static VS Code title and disables the TUI's
+      // per-terminal OSC titles. Neovim's titlestring owns the file name.
       shellPath: config(session.uri).get('executable', 'nvim'),
       shellArgs: session.shared ? ['--server', session.socket, '--remote-ui']
         : ['-n', '--listen', session.socket, '--', session.uri.fsPath],
@@ -150,9 +149,14 @@ async function activate(context) {
       await session.client.request('nvim_exec_lua', [await fileScript, [await session.client.channelId]]);
       await session.client.request('nvim_exec_lua', [await keymapsScript, []]);
       await session.client.request('nvim_exec_lua', [await hoverScript, []]);
-      await applyTheme(session.client).catch(error => output.appendLine(`Theme sync: ${error.message}`));
-      await session.client.request('nvim_exec_lua', [await referencesScript, [config(uri).get('improveReferences', true)]])
-        .catch(error => output.appendLine(`Telescope references: ${error.message}`));
+      // Theme discovery and optional Telescope setup must not delay opening the
+      // terminal. Tracking/recovery is ready before exposing the buffer.
+      session.enhancements = applyTheme(session.client)
+        .catch(error => output.appendLine(`Theme sync: ${error.message}`))
+        .then(async () => {
+          if (!session.disposed) await session.client.request('nvim_exec_lua',
+            [await referencesScript, [config(uri).get('improveReferences', true)]]);
+        }).catch(error => output.appendLine(`Telescope references: ${error.message}`));
       if (shared) showTerminal(session, viewColumn);
       context.subscriptions.push({ dispose: () => {
         session.disposed = true;
@@ -173,21 +177,28 @@ async function activate(context) {
     if (!uri || uri.scheme !== 'file') {
       throw new Error('Choose a saved file to open in Neovim.');
     }
-    try {
-      const stat = await vscode.workspace.fs.stat(uri);
-      if (!(stat.type & vscode.FileType.File)) throw new Error('Choose a file, not a folder.');
-    } catch (error) {
-      if (!(restoring && documents.state.buffers[uri.fsPath]?.modified && error.code === 'FileNotFound')) throw error;
-    }
-    const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === uri.toString());
-    const restored = restoring && document && documents.state.buffers[uri.fsPath]?.text === document.getText();
-    if (document?.isDirty && !restored && !documents.records.has(uri.fsPath)) throw new Error('Save this file in VS Code before opening it in Neovim.');
     const fileKey = uri.toString();
     const cwd = restoreCwd || vscode.workspace.getWorkspaceFolder(uri)?.uri.fsPath || path.dirname(uri.fsPath);
     const shared = config(uri).get('sharedProcess', true);
     const key = shared ? cwd : fileKey;
+    const version = (openVersions.get(key) || 0) + 1;
+    openVersions.set(key, version);
     const tab = vscode.window.tabGroups.activeTabGroup.activeTab;
     const sourceTab = tab?.input instanceof vscode.TabInputText && tab.input.uri.toString() === fileKey ? tab : undefined;
+    // VS Code already validated a displayed saved text document. Explicit opens
+    // still validate the path, including directories and missing-file recovery.
+    if (!editor || editor.document.uri.toString() !== fileKey || editor.document.isUntitled) {
+      try {
+        const stat = await vscode.workspace.fs.stat(uri);
+        if (!(stat.type & vscode.FileType.File)) throw new Error('Choose a file, not a folder.');
+      } catch (error) {
+        if (!(restoring && documents.state.buffers[uri.fsPath]?.modified && error.code === 'FileNotFound')) throw error;
+      }
+    }
+    if (openVersions.get(key) !== version) return;
+    const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === uri.toString());
+    const restored = restoring && document && documents.state.buffers[uri.fsPath]?.text === document.getText();
+    if (document?.isDirty && !restored && !documents.records.has(uri.fsPath)) throw new Error('Save this file in VS Code before opening it in Neovim.');
     if (!sessions.has(key)) sessions.set(key, start(uri, editor?.viewColumn, key, shared, cwd));
     const pending = sessions.get(key);
     let session;
@@ -197,20 +208,21 @@ async function activate(context) {
       if (sessions.get(key) === pending) sessions.delete(key);
       throw error;
     }
+    if (openVersions.get(key) !== version) return;
     const restoredTarget = session.restoredTarget || documents.state.active[cwd]?.path;
     if (restoring && restoredTarget && restoredTarget !== uri.fsPath) uri = vscode.Uri.file(restoredTarget);
     session.restoredTarget = undefined;
     // Users may start typing while Neovim's config loads. Never close those edits.
     if (document?.isDirty && !restored && !documents.records.has(uri.fsPath)) return;
-    if (await session.client.request('nvim_buf_get_name', [0]) !== uri.fsPath) {
-      await session.client.request('nvim_exec_lua', ["local file = ...; local buf = vim.fn.bufadd(file); vim.fn.bufload(buf); vim.api.nvim_set_current_buf(buf)", [uri.fsPath]]);
-    }
-    if (editor) {
-      await session.client.request('nvim_win_set_cursor', [0, [editor.selection.active.line + 1,
-        Buffer.byteLength(editor.document.lineAt(editor.selection.active.line).text.slice(0, editor.selection.active.character))]]);
-    }
-    if (sourceTab && !sourceTab.isDirty) await vscode.window.tabGroups.close(sourceTab, true);
+    const position = editor ? { line: editor.selection.active.line,
+      byteColumn: Buffer.byteLength(editor.document.lineAt(editor.selection.active.line).text.slice(0, editor.selection.active.character)) } : undefined;
+    const file = await switchFile(session.client, uri.fsPath, position);
+    if (openVersions.get(key) !== version) return;
+    if (document?.isDirty && !restored && !documents.records.has(uri.fsPath)) return;
+    session.file = file;
+    updateTerminalContext();
     showTerminal(session, editor?.viewColumn);
+    if (sourceTab && !sourceTab.isDirty) await vscode.window.tabGroups.close(sourceTab, true);
   }
 
   let running = false;
@@ -226,6 +238,8 @@ async function activate(context) {
       await documents.flush();
       if (filetype === 'python' || path.extname(uri.fsPath).toLowerCase() === '.py') {
         await vscode.commands.executeCommand('python.execInDedicatedTerminal', uri);
+      } else if (filetype === 'autohotkey' || filetype === 'ahk2' || /\.(ahk|ahk2|ah2)$/i.test(uri.fsPath)) {
+        await runAutoHotkey(vscode, uri);
       } else {
         // Generic VS Code runners resolve ${file} through an actual text editor.
         preparingRun = true;
@@ -253,6 +267,16 @@ async function activate(context) {
     void open(editor.document.uri, editor).catch(report);
   };
   context.subscriptions.push(
+    vscode.commands.registerCommand('neovimTerminal.quickOpen', async () => {
+      const session = terminals.get(vscode.window.activeTerminal);
+      if (!vscode.workspace.isTrusted || !session?.client) return;
+      try {
+        const fileUri = vscode.Uri.file(session.file?.path || session.uri.fsPath);
+        const cwd = vscode.workspace.getWorkspaceFolder(fileUri)?.uri.fsPath || session.cwd;
+        const handled = await session.client.request('nvim_exec_lua', [await quickOpenScript, [cwd]]);
+        if (!handled) await vscode.commands.executeCommand('workbench.action.quickOpen');
+      } catch (error) { report(error); }
+    }),
     vscode.commands.registerCommand('neovimTerminal.open', uri => {
       const editor = vscode.window.activeTextEditor;
       return open(uri || editor?.document.uri,

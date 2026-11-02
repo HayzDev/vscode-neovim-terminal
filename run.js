@@ -21,4 +21,16 @@ async function saveCurrentFile(vscode, client, ownsDocument = () => false) {
   return { uri, filetype: file.filetype };
 }
 
-module.exports = { saveCurrentFile };
+async function runAutoHotkey(vscode, uri) {
+  const executable = vscode.workspace.getConfiguration('AutoHotkey2', uri).get('InterpreterPath') || 'AutoHotkey.exe';
+  const task = new vscode.Task(
+    { type: 'neovim-terminal', file: uri.fsPath },
+    vscode.workspace.getWorkspaceFolder(uri) || vscode.TaskScope.Workspace,
+    `Run ${path.basename(uri.fsPath)}`, 'Neovim Terminal',
+    new vscode.ProcessExecution(executable, ['/ErrorStdOut', uri.fsPath], { cwd: path.dirname(uri.fsPath) }),
+  );
+  task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, panel: vscode.TaskPanelKind.Dedicated, focus: false, clear: true };
+  return vscode.tasks.executeTask(task);
+}
+
+module.exports = { saveCurrentFile, runAutoHotkey };

@@ -2,7 +2,7 @@
   "name": "neovim-terminal",
   "displayName": "Neovim Terminal",
   "description": "Open files in real Neovim terminals in the VS Code editor area.",
-  "version": "0.1.3",
+  "version": "0.1.9",
   "publisher": "xander-local",
   "engines": {
     "vscode": "^1.100.0"
@@ -27,6 +27,10 @@
   },
   "contributes": {
     "commands": [
+      {
+        "command": "neovimTerminal.quickOpen",
+        "title": "Neovim Terminal: Find File"
+      },
       {
         "command": "neovimTerminal.open",
         "title": "Neovim Terminal: Open File"
@@ -92,6 +96,12 @@
       }
     },
     "keybindings": [
+      {
+        "key": "ctrl+p",
+        "mac": "cmd+p",
+        "command": "neovimTerminal.quickOpen",
+        "when": "terminalFocus && neovimTerminal.active"
+      },
       {
         "key": "shift+left",
         "command": "workbench.action.terminal.sendSequence",

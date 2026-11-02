@@ -109,8 +109,15 @@ class Documents {
       record.text = document.getText();
       // Neovim already wrote these exact bytes; mark the matching VS Code copy clean.
       if (!snapshot.modified && document.isDirty && disk === snapshot.text) {
-        await document.save();
-        await this.toNeovim(record, document.getText(), true);
+        let failure;
+        try {
+          if (!await document.save()) failure = new Error('VS Code rejected the save');
+        } catch (error) { failure = error; }
+        if (failure) {
+          const recovered = await this.recover(file, document.getText());
+          throw new Error(`VS Code could not confirm the save for ${file}. A recovery copy was saved to ${recovered}. Compare the native editor with disk before resolving the conflict.`, { cause: failure });
+        }
+        await this.toNeovim(record, document.getText(), !document.isDirty);
       }
     } finally { this.applying.delete(file); }
   }

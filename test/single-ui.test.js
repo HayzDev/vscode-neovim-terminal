@@ -10,7 +10,7 @@ const { socketPath } = require('../transport');
 test('replacement UI releases stale small screen without losing unsaved buffers', async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'nvim-ui-'));
   const socket = socketPath(directory);
-  const child = spawn('nvim', ['--clean', '--headless', '--listen', socket]);
+  const child = spawn('nvim', ['-n', '--clean', '--headless', '--listen', socket]);
   const connections = [];
   try {
     const open = async () => {

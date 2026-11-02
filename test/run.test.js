@@ -43,3 +43,34 @@ test('run saves the current Neovim buffer and blocks conflicting or unnamed buff
     await fs.rm(directory, { recursive: true, force: true });
   }
 });
+
+test('AutoHotkey runs as a process task without opening a native editor', async () => {
+  const { runAutoHotkey } = require('../run');
+  let task;
+  const vscode = {
+    workspace: { getConfiguration: () => ({ get: () => 'C:\\Program Files\\AutoHotkey\\v2\\AutoHotkey.exe' }), getWorkspaceFolder: () => undefined },
+    TaskScope: { Workspace: 2 }, TaskRevealKind: { Always: 1 }, TaskPanelKind: { Dedicated: 2 },
+    ProcessExecution: class { constructor(command, args, options) { Object.assign(this,{command,args,options}); } },
+    Task: class { constructor(definition, scope, name, source, execution) { Object.assign(this,{definition,scope,name,source,execution}); } },
+    tasks: { executeTask: async value => { task=value; return {}; } },
+    window: { showTextDocument: () => { throw Error('must not open native editor'); } },
+  };
+  const file=path.resolve('script with spaces & chars.ahk');
+  await runAutoHotkey(vscode,{fsPath:file});
+  assert.equal(task.execution.args[1],file);
+  assert.equal(task.execution.args[0],'/ErrorStdOut');
+  assert.equal(task.presentationOptions.focus,false);
+  assert.equal(task.execution.options.cwd,path.dirname(file));
+});
+
+test('installed AutoHotkey interpreter accepts direct script arguments', { skip: process.platform !== 'win32' }, async t => {
+  const executable = path.join(process.env.ProgramFiles || 'C:\\Program Files', 'AutoHotkey', 'v2', 'AutoHotkey.exe');
+  try { await fs.access(executable); } catch { t.skip('AutoHotkey v2 is not installed'); return; }
+  const file = path.join(os.tmpdir(), `nvim run ${require('node:crypto').randomUUID()}.ahk`);
+  try {
+    await fs.writeFile(file, '#Requires AutoHotkey v2.0\n#NoTrayIcon\nFileAppend("NVIM_DIRECT_RUN_OK", "*")\nExitApp()\n');
+    const execFile = require('node:util').promisify(require('node:child_process').execFile);
+    const { stdout } = await execFile(executable, ['/ErrorStdOut', file], { windowsHide: true, timeout: 10000 });
+    assert.equal(stdout, 'NVIM_DIRECT_RUN_OK');
+  } finally { await fs.rm(file, { force: true }); }
+});

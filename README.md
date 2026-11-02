@@ -41,6 +41,14 @@ Opening a saved file redirects it to Neovim. Explorer opens, search results, dia
 
 The default is **one shared Neovim backend per workspace folder**, with a lightweight terminal frontend. Files share buffers, plugins, registers, and language servers. Use normal Neovim buffer navigation (`:ls`, `:buffer`, `:bnext`). The terminal tab follows the current filename and shows `*` for unsaved changes. Multiple independent terminal views of one backend are deliberately avoided because Neovim remote UIs share a screen.
 
+The TUI owns its terminal title, including while the terminal is in the background; temporary picker buffers keep the edited file's title. Set `terminal.integrated.tabs.title` to `${sequence}` to display Neovim's filename title instead of the process name (`nvim`); terminals without a title sequence fall back to their process name. Avoid manually renaming that terminal, since a fixed VS Code name overrides process title updates. Warm file switches combine buffer and cursor placement into one RPC and reveal the terminal before waiting for the native editor tab to close. Initial Neovim config loading and filetype hooks can still take time; optional theme and Telescope setup run after recovery/tracking is ready without blocking the handoff.
+
+## Fast file opening
+
+In a managed Neovim terminal, **Ctrl+P** (**Cmd+P** on macOS) opens the existing Snacks file picker, or Telescope's file picker if Snacks is unavailable. Selection stays in Neovim, avoiding the native-editor-to-terminal handoff. Without either picker, it falls back to VS Code Quick Open. Outside the terminal, normal VS Code shortcuts stay unchanged.
+
+If a user keybinding overrides Ctrl+P, add `{ "key": "ctrl+p", "command": "neovimTerminal.quickOpen", "when": "terminalFocus && neovimTerminal.active" }` after it, and add `neovimTerminal.quickOpen` to `terminal.integrated.commandsToSkipShell`.
+
 ## References and popup readability
 
 When Telescope is installed, `lsp_references` (including a user mapping such as `gR`) shows separate colored filename, line/column, folder, and trimmed code columns. Folders are workspace- or `~`-relative and trimmed from the left by whole segments; narrow lists omit them. The selected row keeps its column colors, and the window is sized to the number of results. Complete paths remain searchable and navigation/quickfix targets retain their original locations. The prompt and results start at the top; narrower windows place the preview below the list. Existing per-picker options take precedence. The extension does not install Telescope or replace keybindings. Set `neovimTerminal.improveReferences` to `false` before starting a new Neovim backend to opt out.
@@ -65,7 +73,7 @@ Snapshots currently copy full buffers. Very large files and simultaneous VS Code
 
 ## Running code
 
-**Ctrl+F5** saves and runs the current Neovim file through VS Code. Python uses **Python: Run File in Dedicated Terminal**, including its selected interpreter. Other languages temporarily open the file in a VS Code preview and invoke **Run Without Debugging** with the normal launch configuration. The temporary preview is then cleaned up.
+**Ctrl+F5** saves and runs the current Neovim file through VS Code. Python uses **Python: Run File in Dedicated Terminal**, including its selected interpreter. AutoHotkey runs as a direct process task using `AutoHotkey2.InterpreterPath` (or `AutoHotkey.exe` on PATH), with `/ErrorStdOut` and the saved script path passed as separate arguments. No native editor is opened; output appears in a dedicated task terminal without taking keyboard focus. Stop it with VS Code's Terminate Task command. Other languages temporarily open the file in a VS Code preview and invoke **Run Without Debugging** with the normal launch configuration. The temporary preview is then cleaned up.
 
 The status bar shows the current file and its full path on hover; clicking it also saves and runs. `neovimTerminal.currentFile` returns the active file path for command-variable integrations. Unnamed/plugin buffers, failed writes, and conflicting unmanaged VS Code edits stop the run.
 

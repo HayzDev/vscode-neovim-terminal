@@ -52,3 +52,25 @@ test('snapshots persist privately and recovery never overwrites a changed disk f
     await fs.rm(directory, { recursive: true, force: true });
   }
 });
+
+test('failed native mirror save preserves recovery and never acknowledges a saved buffer', async () => {
+  const directory=await fs.mkdtemp(path.join(os.tmpdir(),'nvim-save-conflict-'));
+  const file=path.join(directory,'example.txt');await fs.writeFile(file,'same text\n');
+  const document={uri:{fsPath:file},isDirty:true,getText:()=> 'same text\n',save:async()=>false};
+  const noop=()=>({dispose(){}});
+  const vscode={workspace:{onDidChangeTextDocument:noop,onDidSaveTextDocument:noop,openTextDocument:async()=>document},
+    Uri:{file:filename=>({fsPath:filename})},window:{showWarningMessage(){}}};
+  const context={storageUri:{fsPath:path.join(directory,'state')},globalStorageUri:{fsPath:path.join(directory,'global')},subscriptions:[]};
+  const docs=new Documents(vscode,context,error=>{throw error});
+  const session={cwd:directory};
+  docs.records.set(file,{session,buf:1,document,text:'same text\n'});
+  let acknowledged=false;docs.toNeovim=async()=>{acknowledged=true};
+  try {
+    await assert.rejects(docs.mirror(session,{path:file,buf:1,buftype:'',text:'same text\n',modified:false,cursor:[1,0]}),/could not save|could not confirm/i);
+    assert.equal(acknowledged,false);
+    const copies=await fs.readdir(path.join(directory,'global','recovered'));
+    assert.equal(copies.length,1);
+    assert.equal(await fs.readFile(path.join(directory,'global','recovered',copies[0]),'utf8'),'same text\n');
+    assert.equal(await fs.readFile(file,'utf8'),'same text\n');
+  } finally {await fs.rm(directory,{recursive:true,force:true})}
+});

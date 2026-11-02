@@ -39,15 +39,29 @@ local function attach(buf)
     on_detach = function() attached[buf] = nil end,
   })
 end
+local last_file
+local function current_file()
+  local buf = vim.api.nvim_get_current_buf()
+  if vim.bo[buf].buftype == '' and vim.api.nvim_win_get_config(0).relative == '' then
+    last_file = info(buf)
+  end
+  return last_file
+end
+_G.neovim_terminal_title = function()
+  local value = current_file()
+  local name = value and value.path ~= '' and vim.fn.fnamemodify(value.path, ':t') or '[No Name]'
+  return 'nvim: ' .. name .. (value and value.modified and ' *' or '')
+end
 local function report()
   local buf = vim.api.nvim_get_current_buf()
   attach(buf)
-  send('neovim_terminal.file', info(buf))
+  local value = current_file()
+  if value then send('neovim_terminal.file', value) end
   queue(buf)
 end
 vim.o.hidden = true
 vim.o.title = true
-vim.o.titlestring = 'nvim: %t%m'
+vim.o.titlestring = '%{v:lua.neovim_terminal_title()}'
 vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter', 'BufFilePost', 'BufWritePost', 'FileType' }, {
   group = vim.api.nvim_create_augroup('NeovimTerminalCurrentFile', { clear = true }), callback = report,
 })
@@ -57,7 +71,10 @@ vim.api.nvim_create_autocmd(modified_event, {
 })
 vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
   group = 'NeovimTerminalCurrentFile',
-  callback = function() send('neovim_terminal.file', info(vim.api.nvim_get_current_buf())) end,
+  callback = function()
+    local value = current_file()
+    if value then send('neovim_terminal.file', value) end
+  end,
 })
 _G.neovim_terminal_snapshot = function()
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do

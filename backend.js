@@ -14,6 +14,9 @@ async function backend(executable, uri, cwd, store) {
       if (process.platform !== 'win32') await fs.access(saved.socket);
       const connection = await connect(saved.socket, controller.signal);
       clearTimeout(timer);
+      await connection.client.request('nvim_exec_lua', [
+        'local cwd = ...; vim.api.nvim_set_current_dir(cwd); vim.g.neovim_terminal_workspace = cwd', [cwd],
+      ]);
       return { ...saved, connection, reused: true };
     } catch { clearTimeout(timer); controller.abort(); }
   }
@@ -28,6 +31,9 @@ async function backend(executable, uri, cwd, store) {
   try { await started; } finally { await log.close(); }
   child.unref();
   const connection = await connect(socket, new AbortController().signal);
+  await connection.client.request('nvim_exec_lua', [
+    'local cwd = ...; vim.api.nvim_set_current_dir(cwd); vim.g.neovim_terminal_workspace = cwd', [cwd],
+  ]);
   const info = { directory, socket, pid: child.pid };
   store.state.backends[cwd] = info;
   await store.persist();
