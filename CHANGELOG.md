@@ -5,6 +5,7 @@
 - Document installation, architecture, behavior, safety guarantees, limitations, and troubleshooting.
 - Add Linux/macOS Bash and Windows PowerShell installers, including a prebuilt VSIX option.
 - Add Windows named-pipe addresses for both shared and per-file sessions; reattach pipes without filesystem access checks.
+- Normalize reported paths to VS Code URIs and support both stable and nightly modified-state events.
 - Add installer/transport tests and a three-platform unit/RPC/packaging workflow.
 - Publish source and packaged VSIX in the GitHub repository; retain the extension ID `xander-local.neovim-terminal` so existing installations upgrade normally.
 

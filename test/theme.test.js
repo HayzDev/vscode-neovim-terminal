@@ -6,7 +6,7 @@ const path = require('node:path');
 const { readTheme, palette, rgb, overrides } = require('../theme');
 
 test('JSONC themes inherit colors and token rules and reject circular includes', async () => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'nvim-theme-'));
+  const directory = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'nvim-theme-')));
   try {
     await fs.writeFile(path.join(directory, 'base.json'), '{// comment\n"colors":{"editor.background":"#112233"},"tokenColors":[{"scope":"comment","settings":{"foreground":"#555555"}}],}');
     const child = path.join(directory, 'child.json');

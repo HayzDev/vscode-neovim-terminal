@@ -10,14 +10,14 @@ const { connect } = require('../rpc');
 const { saveCurrentFile } = require('../run');
 
 test('run saves the current Neovim buffer and blocks conflicting or unnamed buffers', async () => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'nvim-run-'));
+  const directory = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'nvim-run-')));
   const first = path.join(directory, 'first.py');
   const second = path.join(directory, 'second file.py');
   await fs.writeFile(first, 'print(1)\n');
   await fs.writeFile(second, 'print(2)\n');
   const socket = socketPath(directory);
   const child = spawn('nvim', ['--clean', '--headless', '--listen', socket, '--', first]);
-  const vscode = { Uri: { file: file => ({ fsPath: file, toString: () => pathToFileURL(file).href }) }, workspace: { textDocuments: [] } };
+  const vscode = { Uri: { file: file => ({ fsPath: path.normalize(file), toString: () => pathToFileURL(file).href }) }, workspace: { textDocuments: [] } };
   let connection;
   try {
     connection = await connect(socket, new AbortController().signal);

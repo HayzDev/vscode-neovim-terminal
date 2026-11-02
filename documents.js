@@ -53,6 +53,7 @@ class Documents {
   // shortcut: snapshots copy whole buffers; use incremental patches if large files make typing slow.
   receive(session, snapshot) {
     if (snapshot.buftype !== '' || typeof snapshot.text !== 'string') return Promise.resolve();
+    if (snapshot.path) snapshot = { ...snapshot, path: this.vscode.Uri.file(snapshot.path).fsPath };
     if (!snapshot.path) {
       if (!snapshot.modified) return Promise.resolve();
       const id = session.backendPid || hash(session.key).slice(0, 12);

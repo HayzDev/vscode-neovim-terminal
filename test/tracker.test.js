@@ -9,7 +9,7 @@ const { setTimeout: delay } = require('node:timers/promises');
 const { connect } = require('../rpc');
 
 test('buffer snapshots preserve empty files, CRLF, and missing final newlines', async () => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'nvim-track-'));
+  const directory = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'nvim-track-')));
   const file = path.join(directory, 'empty.txt');
   await fs.writeFile(file, '');
   const socket = socketPath(directory);
@@ -26,7 +26,7 @@ test('buffer snapshots preserve empty files, CRLF, and missing final newlines', 
       await connection.client.request('nvim_cmd', [{ cmd: 'edit', args: [next] }, {}]);
       let snapshot;
       for (let i = 0; i < 50; i++) {
-        snapshot = snapshots.find(value => value.path === next);
+        snapshot = snapshots.find(value => path.normalize(value.path) === next);
         if (snapshot) break;
         await delay(20);
       }

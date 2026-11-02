@@ -8,7 +8,7 @@ const path = require('node:path');
 const { connect } = require('../rpc');
 
 test('shift arrows use Home/End and reuse visual Tab mappings from normal and visual modes', async () => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'nvim-keys-'));
+  const directory = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'nvim-keys-')));
   const socket = socketPath(directory);
   const child = spawn('nvim', ['--clean', '--headless', '--listen', socket]);
   let connection;

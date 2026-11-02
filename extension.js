@@ -130,6 +130,7 @@ async function activate(context) {
       session.client.on('notification', (method, args) => {
         if (method === 'neovim_terminal.file') {
           session.file = args[0];
+          if (session.file.path) session.file.path = vscode.Uri.file(session.file.path).fsPath;
           if (session.file.buftype === '') {
             const tracked = [...documents.records.entries()].find(([, record]) => record.session === session && record.buf === session.file.buf)?.[0];
             const filename = session.file.path || tracked;

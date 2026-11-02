@@ -48,8 +48,12 @@ end
 vim.o.hidden = true
 vim.o.title = true
 vim.o.titlestring = 'nvim: %t%m'
-vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter', 'BufFilePost', 'BufWritePost', 'BufModifiedSet', 'FileType' }, {
+vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter', 'BufFilePost', 'BufWritePost', 'FileType' }, {
   group = vim.api.nvim_create_augroup('NeovimTerminalCurrentFile', { clear = true }), callback = report,
+})
+local modified_event = vim.fn.exists('##BufModifiedSet') == 1 and 'BufModifiedSet' or 'OptionSet'
+vim.api.nvim_create_autocmd(modified_event, {
+  group = 'NeovimTerminalCurrentFile', pattern = modified_event == 'OptionSet' and 'modified' or '*', callback = report,
 })
 vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
   group = 'NeovimTerminalCurrentFile',

@@ -9,7 +9,7 @@ const { Documents, hash } = require('../documents');
 const { connect } = require('../rpc');
 
 test('snapshots persist privately and recovery never overwrites a changed disk file', async () => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'nvim-recovery-'));
+  const directory = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'nvim-recovery-')));
   const file = path.join(directory, 'example.lua');
   await fs.writeFile(file, 'original\n');
   const context = { storageUri: { fsPath: path.join(directory, 'storage') },
