@@ -41,6 +41,12 @@ Opening a saved file redirects it to Neovim. Explorer opens, search results, dia
 
 The default is **one shared Neovim backend per workspace folder**, with a lightweight terminal frontend. Files share buffers, plugins, registers, and language servers. Use normal Neovim buffer navigation (`:ls`, `:buffer`, `:bnext`). The terminal tab follows the current filename and shows `*` for unsaved changes. Multiple independent terminal views of one backend are deliberately avoided because Neovim remote UIs share a screen.
 
+## References and popup readability
+
+When Telescope is installed, `lsp_references` (including a user mapping such as `gR`) shows separate colored filename, line/column, abbreviated folder, and trimmed code columns. Complete paths remain searchable and navigation/quickfix targets retain their original locations. The prompt and results start at the top; narrower windows place the preview below the list. Existing per-picker options take precedence. The extension does not install Telescope or replace keybindings. Set `neovimTerminal.improveReferences` to `false` before starting a new Neovim backend to opt out.
+
+Floating popups use theme colors with visible borders and a subtle surface tint. Preview sign/fold gutters match that surface while the main editor gutter keeps its theme color.
+
 ## Hover documentation
 
 Pause the mouse over code for 400 ms to request documentation from the buffer's Neovim language server. It appears in a floating Markdown window without moving the editing cursor. Moving away, editing, or scrolling dismisses it. A language server supporting hover must be attached. `:NeovimTerminalHover` shows the same documentation at the cursor if mouse reporting is unavailable.

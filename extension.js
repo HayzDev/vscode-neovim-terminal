@@ -41,6 +41,8 @@ async function activate(context) {
   await documents.load();
   const hoverScript = fs.readFile(path.join(context.extensionPath, 'lua/hover.lua'), 'utf8');
   const fileScript = fs.readFile(path.join(context.extensionPath, 'lua/current-file.lua'), 'utf8');
+  const singleUiScript = fs.readFile(path.join(context.extensionPath, 'lua/single-ui.lua'), 'utf8');
+  const referencesScript = fs.readFile(path.join(context.extensionPath, 'lua/references.lua'), 'utf8');
   const keymapsScript = fs.readFile(path.join(context.extensionPath, 'lua/keymaps.lua'), 'utf8');
   const themeScript = fs.readFile(path.join(context.extensionPath, 'lua/theme.lua'), 'utf8');
   let themeQueue = Promise.resolve();
@@ -116,6 +118,7 @@ async function activate(context) {
         session.connection = await connect(session.socket, session.controller.signal);
       }
       session.client = session.connection.client;
+      if (shared) await session.client.request('nvim_exec_lua', [await singleUiScript, []]);
       session.client.on('disconnect', () => {
         session.disposed = true;
         sessions.delete(session.key);
@@ -148,6 +151,8 @@ async function activate(context) {
       await session.client.request('nvim_exec_lua', [await keymapsScript, []]);
       await session.client.request('nvim_exec_lua', [await hoverScript, []]);
       await applyTheme(session.client).catch(error => output.appendLine(`Theme sync: ${error.message}`));
+      await session.client.request('nvim_exec_lua', [await referencesScript, [config(uri).get('improveReferences', true)]])
+        .catch(error => output.appendLine(`Telescope references: ${error.message}`));
       if (shared) showTerminal(session, viewColumn);
       context.subscriptions.push({ dispose: () => {
         session.disposed = true;

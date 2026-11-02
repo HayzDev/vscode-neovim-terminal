@@ -90,15 +90,39 @@ function palette(theme, name, light, colorSettings = {}, tokenSettings = {}, sem
   set('Normal', foreground, background);
   set('NormalNC', foreground, background);
   set('EndOfBuffer', background, background);
-  set('SignColumn', foreground, color('editorGutter.background', background));
-  set('LineNr', color('editorLineNumber.foreground'), background);
-  set('CursorLineNr', color('editorLineNumber.activeForeground'), background);
+  set('SignColumn', foreground, rgb(colors['editorGutter.background'], background));
+  set('LineNr', color('editorLineNumber.foreground'));
+  set('CursorLineNr', color('editorLineNumber.activeForeground'));
   set('CursorLine', undefined, color('editor.lineHighlightBackground', background));
   set('Visual', undefined, color('editor.selectionBackground', light ? '#add6ff' : '#264f78'));
-  set('NormalFloat', color('editorHoverWidget.foreground'), color('editorHoverWidget.background', background));
-  set('FloatBorder', color('editorHoverWidget.border'), color('editorHoverWidget.background', background));
-  set('Pmenu', color('editorSuggestWidget.foreground'), color('editorSuggestWidget.background', background));
-  set('PmenuSel', color('editorSuggestWidget.selectedForeground'), color('editorSuggestWidget.selectedBackground', color('editor.selectionBackground', background)));
+  // Flat and transparent themes often give floating widgets the editor's own
+  // background. Keep their hues, but raise contrast enough to reveal the edges.
+  const readable = (fg, bg) => hintColors(fg, bg, 4.5).bg;
+  const surface = key => hintColors(color(key, background), background, 1.12).bg;
+  const popup = surface('editorHoverWidget.background');
+  const menu = surface('editorSuggestWidget.background');
+  const border = hintColors(color('editorHoverWidget.border', color('focusBorder')), popup, 3).bg;
+  const selected = hintColors(color('editorSuggestWidget.selectedBackground', color('editor.selectionBackground', menu)), menu, 1.3).bg;
+  set('NormalFloat', readable(color('editorHoverWidget.foreground'), popup), popup, { blend: 0 });
+  set('FloatBorder', border, popup, { blend: 0 });
+  set('FloatTitle', readable(color('terminal.ansiYellow', color('focusBorder')), popup), popup, { bold: true });
+  set('FloatFooter', readable(foreground, popup), popup);
+  set('Pmenu', readable(color('editorSuggestWidget.foreground'), menu), menu, { blend: 0 });
+  set('PmenuSel', readable(color('editorSuggestWidget.selectedForeground'), selected), selected);
+  for (const [target, groups] of Object.entries({
+    NormalFloat: ['SnacksNormal', 'SnacksNormalNC', 'SnacksPicker', 'SnacksPickerBox', 'SnacksPickerNormal', 'SnacksPickerInput', 'SnacksPickerList', 'SnacksPickerPreview', 'TelescopeNormal', 'TelescopePromptNormal', 'TelescopeResultsNormal', 'TelescopePreviewNormal'],
+    FloatBorder: ['SnacksWinSeparator', 'SnacksPickerBorder', 'SnacksPickerInputBorder', 'SnacksPickerListBorder', 'SnacksPickerPreviewBorder', 'SnacksPickerBoxBorder', 'TelescopeBorder', 'TelescopePromptBorder', 'TelescopeResultsBorder', 'TelescopePreviewBorder'],
+    FloatTitle: ['SnacksTitle', 'SnacksPickerTitle', 'SnacksPickerInputTitle', 'SnacksPickerListTitle', 'SnacksPickerPreviewTitle', 'SnacksPickerBoxTitle', 'TelescopeTitle'],
+    PmenuSel: ['SnacksPickerCursorLine', 'SnacksPickerListCursorLine', 'TelescopeSelection'],
+  })) for (const group of groups) highlights[group] = { ...highlights[target] };
+  const referenceAccent = readable(color('terminal.ansiCyan', '#5ad4e6'), popup);
+  const referenceLocation = readable(color('terminal.ansiYellow', '#fce566'), popup);
+  set('NeovimTerminalReferenceFile', referenceAccent);
+  set('NeovimTerminalReferenceLocation', referenceLocation);
+  set('NeovimTerminalReferencePath', readable(color('descriptionForeground', '#9e9e9e'), popup));
+  set('TelescopeMatching', readable(color('terminal.ansiGreen', '#a9dc76'), popup), undefined, { bold: true });
+  set('TelescopeSelectionCaret', referenceAccent, selected, { bold: true });
+  set('TelescopeMultiSelection', referenceLocation, selected);
   set('WinSeparator', color('editorGroup.border'), background);
   set('StatusLine', color('statusBar.foreground'), color('statusBar.background', background));
   set('StatusLineNC', color('statusBar.foreground'), color('statusBar.noFolderBackground', background));

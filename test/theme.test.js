@@ -68,3 +68,49 @@ test('search matches are foreground-only while both hint chips retain their colo
     }
   }
 });
+
+test('popups remain distinct and readable across flat dark, light, and transparent themes', () => {
+  const { contrast } = require('../theme');
+  for (const background of ['#1e1e1e', '#777777', '#ffffff']) {
+    const h = palette({ colors: { 'editor.background': background,
+      'editor.foreground': background, 'editorHoverWidget.background': background,
+      'editorHoverWidget.border': background, 'editorSuggestWidget.background': background,
+      'editorSuggestWidget.selectedBackground': background,
+      'editorHoverWidget.foreground': background } }, 'Flat', background === '#ffffff').highlights;
+    assert.ok(contrast(h.NormalFloat.bg, h.Normal.bg) >= 1.12, 'popup surface differs from editor');
+    assert.ok(contrast(h.FloatBorder.fg, h.NormalFloat.bg) >= 3, 'visible popup border');
+    assert.ok(contrast(h.NormalFloat.fg, h.NormalFloat.bg) >= 4.5, 'readable popup text');
+    assert.ok(contrast(h.PmenuSel.bg, h.Pmenu.bg) >= 1.3, 'visible selected row');
+    assert.ok(contrast(h.PmenuSel.fg, h.PmenuSel.bg) >= 4.5, 'readable selected row');
+    assert.deepEqual(h.SnacksPickerNormal, h.NormalFloat);
+    assert.deepEqual(h.SnacksPicker, h.NormalFloat);
+    assert.deepEqual(h.SnacksPickerCursorLine, h.PmenuSel);
+    assert.deepEqual(h.SnacksPickerBorder, h.FloatBorder);
+    assert.deepEqual(h.SnacksPickerListCursorLine, h.PmenuSel);
+    assert.equal(h.NormalFloat.blend, 0);
+  }
+});
+
+test('Monokai popups use a subtle surface, theme accent titles, and seamless gutters', () => {
+  const { contrast } = require('../theme');
+  const h = palette({ colors: { 'editor.background': '#1e1e1e', 'editor.foreground': '#fcfcfa',
+    'terminal.ansiYellow': '#fce566', 'editorHoverWidget.background': '#1e1e1e' } }, 'Monokai', false).highlights;
+  assert.ok(contrast(h.NormalFloat.bg, h.Normal.bg) < 1.2, 'avoid a large bright grey slab');
+  assert.equal(h.FloatTitle.fg, '#fce566', 'retain theme yellow titles');
+  assert.equal(h.PmenuSel.bold, undefined, 'selection must not bold every result');
+  assert.equal(h.LineNr.bg, undefined, 'gutter inherits popup or editor surface');
+  assert.equal(h.CursorLineNr.bg, undefined);
+});
+
+test('reference fields and matches use readable distinct theme accents', () => {
+  const { contrast } = require('../theme');
+  for (const light of [false, true]) {
+    const h = palette({ colors: { 'editor.background': light ? '#ffffff' : '#1e1e1e',
+      'terminal.ansiCyan': '#5ad4e6', 'terminal.ansiYellow': '#fce566', 'terminal.ansiGreen': '#a9dc76' } }, 'References', light).highlights;
+    for (const group of ['NeovimTerminalReferenceFile', 'NeovimTerminalReferenceLocation', 'NeovimTerminalReferencePath', 'TelescopeMatching']) {
+      assert.ok(contrast(h[group].fg, h.NormalFloat.bg) >= 4.5, group);
+    }
+    assert.notEqual(h.NeovimTerminalReferenceFile.fg, h.NeovimTerminalReferenceLocation.fg);
+    assert.equal(h.TelescopeMatching.bold, true);
+  }
+});

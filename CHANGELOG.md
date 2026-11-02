@@ -1,5 +1,12 @@
 # Change history
 
+## 0.1.2 — 2026-11-01
+
+- Replace stale shared terminal UI attachments so a hidden small view cannot constrain the active screen; retain the backend and unsaved buffers.
+- Improve theme-aware popup surfaces, borders, titles, selections, and floating preview gutters while preserving the main editor gutter.
+- Add optional Telescope LSP references formatting: colored filename/location/folder columns, trimmed code snippets, top-aligned results, and an adaptive side/bottom preview. Preserve complete search paths, navigation targets, and user picker overrides.
+- Add real Neovim regression checks for UI replacement, gutter colors, and reference formatting, plus a local real-Telescope layout/navigation check.
+
 ## 0.1.1 — 2026-11-01
 
 - Document installation, architecture, behavior, safety guarantees, limitations, and troubleshooting.

@@ -8,6 +8,31 @@ vim.api.nvim_exec_autocmds('ColorScheme', { pattern = 'vscode-terminal' })
 for group, values in pairs(theme.highlights) do
   vim.api.nvim_set_hl(0, group, values)
 end
+-- Theme gutter backgrounds belong to the main editor, not popup previews.
+vim.api.nvim_set_hl(0, 'NeovimTerminalFloatGutter', {
+  fg = theme.highlights.SignColumn.fg,
+  bg = theme.highlights.NormalFloat.bg,
+})
+local gutter_groups = { SignColumn = true, FoldColumn = true, CursorLineSign = true, CursorLineFold = true }
+local function sync_float_gutters()
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_win_get_config(win).relative ~= '' then
+      local mappings = {}
+      for entry in vim.wo[win].winhighlight:gmatch('[^,]+') do
+        if not gutter_groups[entry:match('^([^:]+):')] then mappings[#mappings + 1] = entry end
+      end
+      for group in pairs(gutter_groups) do
+        mappings[#mappings + 1] = group .. ':NeovimTerminalFloatGutter'
+      end
+      vim.wo[win].winhighlight = table.concat(mappings, ',')
+    end
+  end
+end
+vim.api.nvim_create_autocmd({ 'WinNew', 'WinEnter', 'BufWinEnter' }, {
+  group = vim.api.nvim_create_augroup('NeovimTerminalFloatGutters', { clear = true }),
+  callback = function() vim.schedule(sync_float_gutters) end,
+})
+sync_float_gutters()
 local links = {
   ['@comment'] = 'Comment', ['@string'] = 'String', ['@character'] = 'Character',
   ['@number'] = 'Number', ['@boolean'] = 'Boolean', ['@constant'] = 'Constant',

@@ -2,7 +2,7 @@
   "name": "neovim-terminal",
   "displayName": "Neovim Terminal",
   "description": "Open files in real Neovim terminals in the VS Code editor area.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "xander-local",
   "engines": {
     "vscode": "^1.100.0"
@@ -63,6 +63,11 @@
     "configuration": {
       "title": "Neovim Terminal",
       "properties": {
+        "neovimTerminal.improveReferences": {
+          "type": "boolean",
+          "default": true,
+          "description": "Improve Telescope LSP references with colored file/location columns and an adaptive layout when Telescope is installed. Existing picker options take precedence. Start a new Neovim backend after changing this setting."
+        },
         "neovimTerminal.autoOpen": {
           "type": "boolean",
           "default": true,
