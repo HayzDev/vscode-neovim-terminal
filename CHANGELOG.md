@@ -1,5 +1,13 @@
 # Change history
 
+## 0.1.3 — 2026-11-01
+
+- Keep reference column colors on the selected row: Telescope's selection is now background-only, and column colors meet contrast on both the selected and plain rows.
+- Show reference folders as workspace- or `~`-relative paths trimmed from the left by whole segments instead of single-letter abbreviations; omit the folder column on narrow lists.
+- Resolve reference column widths per picker size instead of caching the first picker's widths.
+- Size the references window to the result count, drop the column-legend title, and shorten the preview title.
+- Extend the real-Telescope check with selected-row highlight, folder, title, and compact-height assertions at three widths.
+
 ## 0.1.2 — 2026-11-01
 
 - Replace stale shared terminal UI attachments so a hidden small view cannot constrain the active screen; retain the backend and unsaved buffers.

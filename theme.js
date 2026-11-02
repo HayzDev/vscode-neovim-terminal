@@ -113,16 +113,35 @@ function palette(theme, name, light, colorSettings = {}, tokenSettings = {}, sem
     NormalFloat: ['SnacksNormal', 'SnacksNormalNC', 'SnacksPicker', 'SnacksPickerBox', 'SnacksPickerNormal', 'SnacksPickerInput', 'SnacksPickerList', 'SnacksPickerPreview', 'TelescopeNormal', 'TelescopePromptNormal', 'TelescopeResultsNormal', 'TelescopePreviewNormal'],
     FloatBorder: ['SnacksWinSeparator', 'SnacksPickerBorder', 'SnacksPickerInputBorder', 'SnacksPickerListBorder', 'SnacksPickerPreviewBorder', 'SnacksPickerBoxBorder', 'TelescopeBorder', 'TelescopePromptBorder', 'TelescopeResultsBorder', 'TelescopePreviewBorder'],
     FloatTitle: ['SnacksTitle', 'SnacksPickerTitle', 'SnacksPickerInputTitle', 'SnacksPickerListTitle', 'SnacksPickerPreviewTitle', 'SnacksPickerBoxTitle', 'TelescopeTitle'],
-    PmenuSel: ['SnacksPickerCursorLine', 'SnacksPickerListCursorLine', 'TelescopeSelection'],
+    PmenuSel: ['SnacksPickerCursorLine', 'SnacksPickerListCursorLine'],
   })) for (const group of groups) highlights[group] = { ...highlights[target] };
-  const referenceAccent = readable(color('terminal.ansiCyan', '#5ad4e6'), popup);
-  const referenceLocation = readable(color('terminal.ansiYellow', '#fce566'), popup);
+  // A foreground on TelescopeSelection would repaint every colored column.
+  // An inverted selection may have no text color readable on both surfaces;
+  // in that case use a nearby selection surface for this picker only.
+  const sharedText = ['#000000', '#ffffff', '#767676'].some(fg =>
+    contrast(fg, popup) >= 4.5 && contrast(fg, selected) >= 4.5);
+  const referenceSelection = sharedText ? selected : hintColors(popup, popup, 1.3).bg;
+  const referenceText = accent => {
+    for (let step = 0; step <= 255; step++) {
+      for (const target of [0, 255]) {
+        const fg = '#' + [1, 3, 5].map(offset => {
+          const from = parseInt(accent.slice(offset, offset + 2), 16);
+          return Math.round(from + (target - from) * step / 255).toString(16).padStart(2, '0');
+        }).join('');
+        if (contrast(fg, popup) >= 4.5 && contrast(fg, referenceSelection) >= 4.5) return fg;
+      }
+    }
+    return readable(accent, popup);
+  };
+  set('TelescopeSelection', undefined, referenceSelection);
+  const referenceAccent = referenceText(color('terminal.ansiCyan', '#5ad4e6'));
+  const referenceLocation = referenceText(color('terminal.ansiYellow', '#fce566'));
   set('NeovimTerminalReferenceFile', referenceAccent);
   set('NeovimTerminalReferenceLocation', referenceLocation);
-  set('NeovimTerminalReferencePath', readable(color('descriptionForeground', '#9e9e9e'), popup));
-  set('TelescopeMatching', readable(color('terminal.ansiGreen', '#a9dc76'), popup), undefined, { bold: true });
-  set('TelescopeSelectionCaret', referenceAccent, selected, { bold: true });
-  set('TelescopeMultiSelection', referenceLocation, selected);
+  set('NeovimTerminalReferencePath', referenceText(color('descriptionForeground', '#9e9e9e')));
+  set('TelescopeMatching', referenceText(color('terminal.ansiGreen', '#a9dc76')), undefined, { bold: true });
+  set('TelescopeSelectionCaret', referenceAccent, referenceSelection, { bold: true });
+  set('TelescopeMultiSelection', referenceLocation, referenceSelection);
   set('WinSeparator', color('editorGroup.border'), background);
   set('StatusLine', color('statusBar.foreground'), color('statusBar.background', background));
   set('StatusLineNC', color('statusBar.foreground'), color('statusBar.noFolderBackground', background));

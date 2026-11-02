@@ -22,6 +22,7 @@ test('optional references formatter separates fields and preserves navigation, s
       package.loaded['telescope.make_entry'] = { gen_from_quickfix = function() return function(item)
         local e=vim.deepcopy(item); e.ordinal=e.filename..' '..e.text; e.value=item; return e
       end end }
+      package.loaded['telescope.state'] = { get_status = function() end }
       package.loaded['telescope.pickers.entry_display'] = { create = function(opts)
         return function(fields) return fields end
       end }
@@ -40,7 +41,8 @@ test('optional references formatter separates fields and preserves navigation, s
       local fields=e.display(e)
       assert(fields[1][1]=='Example.ahk' and fields[1][2]=='NeovimTerminalReferenceFile')
       assert(fields[2][1]=='42:7' and fields[2][2]=='NeovimTerminalReferenceLocation')
-      assert(fields[3][2]=='NeovimTerminalReferencePath' and fields[4]=='call_target()')
+      assert(fields[3][1]=='/workspace/lib' and fields[3][2]=='NeovimTerminalReferencePath' and fields[4]=='call_target()')
+      assert(opts.results_title==false, 'no column legend title')
       return true
     `, []]);
     assert.equal(result, true);

@@ -43,7 +43,7 @@ The default is **one shared Neovim backend per workspace folder**, with a lightw
 
 ## References and popup readability
 
-When Telescope is installed, `lsp_references` (including a user mapping such as `gR`) shows separate colored filename, line/column, abbreviated folder, and trimmed code columns. Complete paths remain searchable and navigation/quickfix targets retain their original locations. The prompt and results start at the top; narrower windows place the preview below the list. Existing per-picker options take precedence. The extension does not install Telescope or replace keybindings. Set `neovimTerminal.improveReferences` to `false` before starting a new Neovim backend to opt out.
+When Telescope is installed, `lsp_references` (including a user mapping such as `gR`) shows separate colored filename, line/column, folder, and trimmed code columns. Folders are workspace- or `~`-relative and trimmed from the left by whole segments; narrow lists omit them. The selected row keeps its column colors, and the window is sized to the number of results. Complete paths remain searchable and navigation/quickfix targets retain their original locations. The prompt and results start at the top; narrower windows place the preview below the list. Existing per-picker options take precedence. The extension does not install Telescope or replace keybindings. Set `neovimTerminal.improveReferences` to `false` before starting a new Neovim backend to opt out.
 
 Floating popups use theme colors with visible borders and a subtle surface tint. Preview sign/fold gutters match that surface while the main editor gutter keeps its theme color.
 

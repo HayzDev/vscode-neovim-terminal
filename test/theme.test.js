@@ -109,8 +109,23 @@ test('reference fields and matches use readable distinct theme accents', () => {
       'terminal.ansiCyan': '#5ad4e6', 'terminal.ansiYellow': '#fce566', 'terminal.ansiGreen': '#a9dc76' } }, 'References', light).highlights;
     for (const group of ['NeovimTerminalReferenceFile', 'NeovimTerminalReferenceLocation', 'NeovimTerminalReferencePath', 'TelescopeMatching']) {
       assert.ok(contrast(h[group].fg, h.NormalFloat.bg) >= 4.5, group);
+      if (group !== 'TelescopeMatching') assert.ok(contrast(h[group].fg, h.TelescopeSelection.bg) >= 4.5, `${group} on selection`);
     }
+    // A selection foreground would override every column color on that row.
+    assert.deepEqual(Object.keys(h.TelescopeSelection), ['bg']);
+    assert.notEqual(h.TelescopeSelection.bg, h.NormalFloat.bg);
     assert.notEqual(h.NeovimTerminalReferenceFile.fg, h.NeovimTerminalReferenceLocation.fg);
     assert.equal(h.TelescopeMatching.bold, true);
+  }
+});
+
+test('reference colors remain readable with opposite popup and selection backgrounds', () => {
+  const { contrast } = require('../theme');
+  const h = palette({ colors: { 'editor.background': '#ffffff', 'editorHoverWidget.background': '#eeeeee',
+    'editorSuggestWidget.background': '#eeeeee', 'editorSuggestWidget.selectedBackground': '#000000',
+    'terminal.ansiCyan': '#5ad4e6', 'terminal.ansiYellow': '#fce566' } }, 'Inverted selection', true).highlights;
+  for (const group of ['NeovimTerminalReferenceFile', 'NeovimTerminalReferenceLocation', 'NeovimTerminalReferencePath', 'TelescopeMatching']) {
+    assert.ok(contrast(h[group].fg, h.NormalFloat.bg) >= 4.5, group + ' popup');
+    assert.ok(contrast(h[group].fg, h.TelescopeSelection.bg) >= 4.5, group + ' selection');
   }
 });
