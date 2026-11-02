@@ -197,6 +197,7 @@ async function activate(context) {
     }
     if (openVersions.get(key) !== version) return;
     const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === uri.toString());
+    if (restoring && document?.isDirty) return;
     const restored = restoring && document && documents.state.buffers[uri.fsPath]?.text === document.getText();
     if (document?.isDirty && !restored && !documents.records.has(uri.fsPath)) throw new Error('Save this file in VS Code before opening it in Neovim.');
     if (!sessions.has(key)) sessions.set(key, start(uri, editor?.viewColumn, key, shared, cwd));
@@ -222,7 +223,7 @@ async function activate(context) {
     session.file = file;
     updateTerminalContext();
     showTerminal(session, editor?.viewColumn);
-    if (sourceTab && !sourceTab.isDirty) await vscode.window.tabGroups.close(sourceTab, true);
+    if (sourceTab && !sourceTab.isDirty && !document?.isDirty) await vscode.window.tabGroups.close(sourceTab, true);
   }
 
   let running = false;
@@ -292,15 +293,19 @@ async function activate(context) {
     vscode.commands.registerCommand('neovimTerminal.restore', async () => {
       const entries = config().get('sharedProcess', true) ? Object.entries(documents.state.active)
         : Object.values(documents.state.buffers).map(entry => [entry.cwd, entry]);
+      let deferred = false;
       for (const [cwd, entry] of entries) {
+        if (!documents.canRestore(cwd)) { deferred = true; continue; }
         const uri = vscode.Uri.file(entry.path);
         await open(uri, undefined, true, cwd);
         const session = await sessions.get(config(uri).get('sharedProcess', true) ? cwd : uri.toString());
+        if (!session) { deferred = true; continue; }
         if (entry.cursor) {
           const count = await session.client.request('nvim_buf_line_count', [0]);
           await session.client.request('nvim_win_set_cursor', [0, [Math.max(1, Math.min(entry.cursor[0], count)), entry.cursor[1]]]);
         }
       }
+      if (deferred) void vscode.window.showWarningMessage('Neovim restore deferred because this workspace has unsaved native editors. Save or compare those changes first, then run Neovim Terminal: Restore Session. No editors were closed.');
     }),
     vscode.commands.registerCommand('neovimTerminal.flush', async () => {
       for (const pending of sessions.values()) {

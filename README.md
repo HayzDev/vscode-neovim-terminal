@@ -61,6 +61,8 @@ Pause the mouse over code for 400 ms to request documentation from the buffer's 
 
 ## Saving, closing, and recovery
 
+At startup, workspace restoration waits if VS Code has an unsaved native document or restored dirty tab in that workspace. The extension leaves those editors untouched instead of opening a competing terminal or triggering a close/save prompt. Save or compare the native changes, then run **Neovim Terminal: Restore Session**. A clean Neovim buffer that is stale relative to disk is refreshed without copying its old contents into a dirty native mirror.
+
 Edits to regular file buffers are mirrored into real VS Code text documents. Dirty indicators, Save/Save All, normal close protection, and hot-exit handling can therefore see them. Native edits and formatter results synchronize back to Neovim. Your VS Code autosave/format-on-save preferences still apply to these documents. Mirrored dirty editor tabs may remain open to provide native protection.
 
 **Neovim Terminal: Close Safely** offers Save All, Keep in Background, or Cancel when there are unsaved buffers. It does not force writes. The ordinary terminal close button uses VS Code's terminal confirmation; closing the shared frontend leaves the backend and its edits alive. `:qa` exits the backend through Neovim's normal unsaved-change checks. Background backends can continue using memory and running language servers after the UI closes.

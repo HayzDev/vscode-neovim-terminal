@@ -2,7 +2,7 @@
   "name": "neovim-terminal",
   "displayName": "Neovim Terminal",
   "description": "Open files in real Neovim terminals in the VS Code editor area.",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "publisher": "xander-local",
   "engines": {
     "vscode": "^1.100.0"

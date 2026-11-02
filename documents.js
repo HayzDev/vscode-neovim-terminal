@@ -36,6 +36,20 @@ class Documents {
     } catch (error) { if (error.code !== 'ENOENT') throw error; }
   }
 
+  canRestore(cwd) {
+    const belongs = uri => {
+      const file = uri.fsPath;
+      if (this.state.buffers[file]?.cwd === cwd) return true;
+      if (uri.scheme && uri.scheme !== 'file') return false;
+      const relative = path.relative(cwd, file);
+      return relative === '' || (!path.isAbsolute(relative) && relative !== '..' && !relative.startsWith('..' + path.sep));
+    };
+    if ((this.vscode.workspace.textDocuments || []).some(document => document.isDirty && belongs(document.uri))) return false;
+    // Restored background tabs can be dirty before VS Code loads their model.
+    const tabs = (this.vscode.window?.tabGroups?.all || []).flatMap(group => group.tabs);
+    return !tabs.some(tab => tab.isDirty && tab.input?.uri && belongs(tab.input.uri));
+  }
+
   persist() {
     const snapshot = JSON.stringify(this.state);
     this.writes = this.writes.catch(this.report).then(async () => {
@@ -76,6 +90,31 @@ class Documents {
     try { disk = await fs.readFile(file, 'utf8'); } catch (error) { if (error.code !== 'ENOENT') throw error; disk = ''; }
     const known = this.records.get(file);
     if (known?.pendingText !== undefined && known.pendingText !== snapshot.text) return;
+    if (!snapshot.modified && disk !== snapshot.text && !snapshot.unnamed) {
+      // A clean buffer is not an authority to replace newer disk contents in a
+      // native model. That would manufacture dirty tabs at the next startup.
+      // Check the live buffer again so edits made since this snapshot survive.
+      await session.client.request('nvim_exec_lua', [`
+        local buf, expected, name = ...
+        if not vim.api.nvim_buf_is_valid(buf) or vim.bo[buf].modified
+          or vim.api.nvim_buf_get_name(buf) ~= name then return false end
+        local separator = vim.bo[buf].fileformat == 'dos' and '\\r\\n' or '\\n'
+        local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+        local text = table.concat(lines, separator)
+          .. (vim.bo[buf].endofline and separator or '')
+        if #lines == 1 and lines[1] == '' and vim.api.nvim_buf_call(buf, function() return vim.fn.wordcount().bytes end) == 0 then
+          text = ''
+        end
+        if text ~= expected then return false end
+        local autoread = vim.bo[buf].autoread
+        vim.bo[buf].autoread = true
+        local ok, err = pcall(vim.api.nvim_buf_call, buf, function() vim.cmd('checktime') end)
+        vim.bo[buf].autoread = autoread
+        if not ok then error(err) end
+        return true
+      `, [snapshot.buf, snapshot.text, file]]);
+      return;
+    }
     const old = this.state.buffers[file];
     this.state.buffers[file] = { path: file, cwd: session.cwd, cursor: snapshot.cursor, unnamed: Boolean(snapshot.unnamed),
       modified: snapshot.modified, ...(snapshot.modified ? { text: snapshot.text } : {}),

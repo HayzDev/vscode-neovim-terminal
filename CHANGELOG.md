@@ -1,5 +1,12 @@
 # Change history
 
+## 0.1.10 — 2026-11-01
+
+- Defer workspace restoration while native documents or restored tabs have unsaved changes, instead of opening a competing terminal and attempting to close them.
+- Refresh stale clean Neovim buffers from disk without replacing newer native document contents or manufacturing dirty mirrors. Recheck live modified state before refreshing so newer edits survive.
+- Check document dirtiness as well as tab dirtiness before closing a native editor after handoff.
+- Add restoration, unloaded-dirty-tab, stale-snapshot, and live Neovim refresh regressions.
+
 ## 0.1.9 — 2026-11-01
 
 - Correct Scratch/editor-like floating windows that map their content back to the main editor background. Align empty-line and default cursor-line surfaces with the popup while retaining plugin-specific title and selection mappings.
